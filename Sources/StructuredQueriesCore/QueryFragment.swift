@@ -154,7 +154,7 @@ extension QueryFragment: ExpressibleByStringInterpolation {
     /// // SELECT "id" FROM "reminders"
     ///
     /// #sql("CREATE TABLE t (c TEXT DEFAULT \(quote: "Blob's world", delimiter: .text))")
-    /// // SELECT TABLE t (c TEXT DEFAULT 'Blob''s world')
+    /// // CREATE TABLE t (c TEXT DEFAULT 'Blob''s world')
     /// ```
     ///
     /// - Parameters:
