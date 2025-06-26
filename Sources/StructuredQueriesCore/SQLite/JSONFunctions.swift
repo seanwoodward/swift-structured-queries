@@ -59,7 +59,7 @@ extension PrimaryKeyedTableDefinition where QueryValue: Codable & Sendable {
   ///     ```swift
   ///     @Selection struct Row {
   ///       let remindersList: RemindersList
-  ///       @Column(as: JSONRepresentation<[Reminder]>.self)
+  ///       @Column(as: [Reminder].JSONRepresentation.self)
   ///       let reminders: [Reminder]
   ///     }
   ///     RemindersList
@@ -76,15 +76,15 @@ extension PrimaryKeyedTableDefinition where QueryValue: Codable & Sendable {
   ///     ```sql
   ///      SELECT
   ///       "remindersLists".…,
-  ///       iif(
-  ///         "reminders"."id" IS NULL,
-  ///         NULL,
+  ///       CASE WHEN
+  ///         ("reminders"."id" IS NOT NULL)
+  ///       THEN
   ///         json_object(
   ///           'id', json_quote("id"),
   ///           'title', json_quote("title"),
   ///           'priority', json_quote("priority")
   ///         )
-  ///       )
+  ///       END AS "reminders"
   ///     FROM "remindersLists"
   ///     JOIN "reminders"
   ///       ON ("remindersLists"."id" = "reminders"."remindersListID")
@@ -105,14 +105,52 @@ extension PrimaryKeyedTableDefinition where QueryValue: Codable & Sendable {
     AggregateFunction(
       "json_group_array",
       isDistinct: isDistinct,
-      [jsonObject.queryFragment],
+      [jsonObject().queryFragment],
       order: order?.queryFragment,
       filter: filter?.queryFragment
     )
   }
 }
 
-extension PrimaryKeyedTableDefinition {
+extension PrimaryKeyedTableDefinition where QueryValue: _OptionalProtocol & Sendable & Codable, QueryValue.Wrapped: Codable & Sendable {
+  /// A JSON Object representing the table's properties.
+  ///
+  /// @Row {
+  ///   @Column {
+  ///       ```swift
+  ///       @Selection struct Row {
+  ///         let reminderID: Int
+  ///         @Column(as: Tag?.JSONRepresentation.self)
+  ///         let tag: Tag?
+  ///       }
+  ///       Reminder
+  ///         .leftJoin(ReminderTag.all) { $0.id.eq($1.reminderID) }
+  ///         .leftJoin(Tag.all) { $1.tagID.eq($2.id) && $2.id == 3 }
+  ///         .select {
+  ///           Row.Columns(
+  ///             reminderID: $0.id,
+  ///             tag: $2.jsonObject()
+  ///           )
+  ///         }
+  ///         ```
+  ///   }
+  ///   @Column {
+  ///     ```sql
+  ///     SELECT "reminders".id" AS "remindersID",
+  ///     CASE WHEN ("tags"."id" IS NOT NULL)
+  ///     THEN json_object('id', "tags"."id", 'title', "tags"."title")
+  ///     END AS "tag"
+  ///     FROM "reminders"
+  ///     LEFT JOIN "remindersTags" ON ("reminders"."id" = "remindersTags"."reminderID"))
+  ///       AND (("remindersTags"."tagID" = 3)
+  ///     LEFT JOIN "tags" ON ("remindersTags"."tagID" = "tags"."id")
+  ///     ```
+  ///   }
+  /// }
+  public func jsonObject() -> some QueryExpression<_CodableJSONRepresentation<QueryValue.Wrapped>> {
+    SQLQueryExpression("CASE WHEN \(primaryKey.isNot(nil)) THEN json_object(\(jsonColumns)) END")
+  }
+
   /// A JSON array representation of the aggregation of a table's columns.
   ///
   /// Constructs a JSON array of JSON objects with a field for each column of the table. This can be
@@ -125,7 +163,7 @@ extension PrimaryKeyedTableDefinition {
   ///     ```swift
   ///     @Selection struct Row {
   ///       let remindersList: RemindersList
-  ///       @Column(as: JSONRepresentation<[Reminder]>.self)
+  ///       @Column(as: [Reminder].JSONRepresentation.self)
   ///       let reminders: [Reminder]
   ///     }
   ///     RemindersList
@@ -142,15 +180,15 @@ extension PrimaryKeyedTableDefinition {
   ///     ```sql
   ///      SELECT
   ///       "remindersLists".…,
-  ///       iif(
-  ///         "reminders"."id" IS NULL,
-  ///         NULL,
+  ///       CASE WHEN
+  ///         ("reminders"."id" IS NOT NULL)
+  ///       THEN
   ///         json_object(
   ///           'id', json_quote("id"),
   ///           'title', json_quote("title"),
   ///           'priority', json_quote("priority")
   ///         )
-  ///       )
+  ///       END AS "reminders"
   ///     FROM "remindersLists"
   ///     JOIN "reminders"
   ///       ON ("remindersLists"."id" = "reminders"."remindersListID")
@@ -163,12 +201,11 @@ extension PrimaryKeyedTableDefinition {
   ///   - order: An `ORDER BY` clause to apply to the aggregation.
   ///   - filter: A `FILTER` clause to apply to the aggregation.
   /// - Returns: A JSON array aggregate of this table.
-  public func jsonGroupArray<Wrapped: Codable & Sendable>(
+  public func jsonGroupArray(
     isDistinct: Bool = false,
     order: (some QueryExpression)? = Bool?.none,
     filter: (some QueryExpression<Bool>)? = Bool?.none
-  ) -> some QueryExpression<[Wrapped].JSONRepresentation>
-  where QueryValue == Wrapped? {
+  ) -> some QueryExpression<[QueryValue.Wrapped].JSONRepresentation> {
     let filterQueryFragment =
       if let filter {
         self.primaryKey.isNot(nil).and(filter).queryFragment
@@ -178,16 +215,56 @@ extension PrimaryKeyedTableDefinition {
     return AggregateFunction(
       "json_group_array",
       isDistinct: isDistinct,
-      [jsonObject.queryFragment],
+      [jsonObject().queryFragment],
       order: order?.queryFragment,
       filter: filterQueryFragment
     )
   }
+}
 
-  fileprivate var jsonObject: some QueryExpression<QueryValue> {
+extension TableDefinition where QueryValue: Sendable & Codable {
+  /// A JSON Object representing the table's properties.
+  ///
+  /// @Row {
+  ///   @Column {
+  ///       ```swift
+  ///       @Selection struct Row {
+  ///         let reminderID: Int
+  ///         @Column(as: Tag?.JSONRepresentation.self)
+  ///         let tag: Tag?
+  ///       }
+  ///       Reminder
+  ///         .leftJoin(ReminderTag.all) { $0.id.eq($1.reminderID) }
+  ///         .leftJoin(Tag.all) { $1.tagID.eq($2.id) && $2.id == 3 }
+  ///         .select {
+  ///           Row.Columns(
+  ///             reminderID: $0.id,
+  ///             tag: $2.jsonObject()
+  ///           )
+  ///         }
+  ///         ```
+  ///   }
+  ///   @Column {
+  ///     ```sql
+  ///     SELECT "reminders".id" AS "remindersID",
+  ///     CASE WHEN ("tags"."id" IS NOT NULL)
+  ///     THEN json_object('id', "tags"."id", 'title', "tags"."title")
+  ///     END AS "tag"
+  ///     FROM "reminders"
+  ///     LEFT JOIN "remindersTags" ON ("reminders"."id" = "remindersTags"."reminderID"))
+  ///       AND (("remindersTags"."tagID" = 3)
+  ///     LEFT JOIN "tags" ON ("remindersTags"."tagID" = "tags"."id")
+  ///     ```
+  ///   }
+  /// }
+  public func jsonObject() -> some QueryExpression<_CodableJSONRepresentation<QueryValue>> {
+    SQLQueryExpression("json_object(\(jsonColumns))")
+  }
+  
+  fileprivate var jsonColumns: some QueryExpression<QueryValue> {
     func open<TableColumn: TableColumnExpression>(_ column: TableColumn) -> QueryFragment {
       typealias Value = TableColumn.QueryValue._Optionalized.Wrapped
-
+      
       func isJSONRepresentation<T: Codable & Sendable>(_: T.Type, isOptional: Bool = false) -> Bool
       {
         func isOptionalJSONRepresentation<U: _OptionalProtocol>(_: U.Type) -> Bool {
@@ -205,7 +282,7 @@ extension PrimaryKeyedTableDefinition {
           return Value.self == T.JSONRepresentation.self
         }
       }
-
+      
       if Value.self == Bool.self {
         return """
           \(quote: column.name, delimiter: .text), \
@@ -227,8 +304,6 @@ extension PrimaryKeyedTableDefinition {
     let fragment: QueryFragment = Self.allColumns
       .map { open($0) }
       .joined(separator: ", ")
-    return SQLQueryExpression(
-      "CASE WHEN \(primaryKey.isNot(nil)) THEN json_object(\(fragment)) END"
-    )
+    return SQLQueryExpression("\(fragment)")
   }
 }
