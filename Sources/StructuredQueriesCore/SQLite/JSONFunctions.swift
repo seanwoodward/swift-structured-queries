@@ -59,7 +59,7 @@ extension PrimaryKeyedTableDefinition where QueryValue: Codable & Sendable {
   ///     ```swift
   ///     @Selection struct Row {
   ///       let remindersList: RemindersList
-  ///       @Column(as: JSONRepresentation<[Reminder]>.self)
+  ///       @Column(as: [Reminder].JSONRepresentation.self)
   ///       let reminders: [Reminder]
   ///     }
   ///     RemindersList
@@ -76,15 +76,15 @@ extension PrimaryKeyedTableDefinition where QueryValue: Codable & Sendable {
   ///     ```sql
   ///      SELECT
   ///       "remindersLists".…,
-  ///       iif(
-  ///         "reminders"."id" IS NULL,
-  ///         NULL,
+  ///       CASE WHEN
+  ///         ("reminders"."id" IS NOT NULL)
+  ///       THEN
   ///         json_object(
   ///           'id', json_quote("id"),
   ///           'title', json_quote("title"),
   ///           'priority', json_quote("priority")
   ///         )
-  ///       )
+  ///       END AS "reminders"
   ///     FROM "remindersLists"
   ///     JOIN "reminders"
   ///       ON ("remindersLists"."id" = "reminders"."remindersListID")
@@ -125,7 +125,7 @@ extension PrimaryKeyedTableDefinition where QueryValue: _OptionalProtocol & Coda
   ///     ```swift
   ///     @Selection struct Row {
   ///       let remindersList: RemindersList
-  ///       @Column(as: JSONRepresentation<[Reminder]>.self)
+  ///       @Column(as: [Reminder].JSONRepresentation.self)
   ///       let reminders: [Reminder]
   ///     }
   ///     RemindersList
@@ -142,15 +142,15 @@ extension PrimaryKeyedTableDefinition where QueryValue: _OptionalProtocol & Coda
   ///     ```sql
   ///      SELECT
   ///       "remindersLists".…,
-  ///       iif(
-  ///         "reminders"."id" IS NULL,
-  ///         NULL,
+  ///       CASE WHEN
+  ///         ("reminders"."id" IS NOT NULL)
+  ///       THEN
   ///         json_object(
   ///           'id', json_quote("id"),
   ///           'title', json_quote("title"),
   ///           'priority', json_quote("priority")
   ///         )
-  ///       )
+  ///       END AS "reminders"
   ///     FROM "remindersLists"
   ///     JOIN "reminders"
   ///       ON ("remindersLists"."id" = "reminders"."remindersListID")
