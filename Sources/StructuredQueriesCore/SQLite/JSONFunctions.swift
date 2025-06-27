@@ -112,7 +112,7 @@ extension PrimaryKeyedTableDefinition where QueryValue: Codable & Sendable {
   }
 }
 
-extension PrimaryKeyedTableDefinition {
+extension PrimaryKeyedTableDefinition where QueryValue: _OptionalProtocol & Codable & Sendable, QueryValue.Wrapped: Codable & Sendable {
   /// A JSON array representation of the aggregation of a table's columns.
   ///
   /// Constructs a JSON array of JSON objects with a field for each column of the table. This can be
@@ -163,12 +163,11 @@ extension PrimaryKeyedTableDefinition {
   ///   - order: An `ORDER BY` clause to apply to the aggregation.
   ///   - filter: A `FILTER` clause to apply to the aggregation.
   /// - Returns: A JSON array aggregate of this table.
-  public func jsonGroupArray<Wrapped: Codable & Sendable>(
+  public func jsonGroupArray(
     isDistinct: Bool = false,
     order: (some QueryExpression)? = Bool?.none,
     filter: (some QueryExpression<Bool>)? = Bool?.none
-  ) -> some QueryExpression<[Wrapped].JSONRepresentation>
-  where QueryValue == Wrapped? {
+  ) -> some QueryExpression<[QueryValue.Wrapped].JSONRepresentation> {
     let filterQueryFragment =
       if let filter {
         self.primaryKey.isNot(nil).and(filter).queryFragment
@@ -183,6 +182,9 @@ extension PrimaryKeyedTableDefinition {
       filter: filterQueryFragment
     )
   }
+}
+
+extension PrimaryKeyedTableDefinition {
 
   fileprivate var jsonObject: some QueryExpression<QueryValue> {
     func open<TableColumn: TableColumnExpression>(_ column: TableColumn) -> QueryFragment {
