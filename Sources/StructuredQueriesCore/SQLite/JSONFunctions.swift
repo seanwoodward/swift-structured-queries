@@ -147,7 +147,7 @@ extension PrimaryKeyedTableDefinition where QueryValue: _OptionalProtocol & Send
   ///     ```
   ///   }
   /// }
-  public func jsonObject() -> some QueryExpression<_CodableJSONRepresentation<QueryValue.Wrapped>> {
+  public func jsonObject() -> some QueryExpression<QueryValue?.JSONRepresentation> {
     SQLQueryExpression("CASE WHEN \(primaryKey.isNot(nil)) THEN json_object(\(jsonColumns)) END")
   }
 
