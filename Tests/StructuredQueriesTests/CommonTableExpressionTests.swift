@@ -213,6 +213,87 @@ extension SnapshotTests {
       }
     }
 
+    @Test func tableAliasIsCTE() {
+      enum TopPriority: AliasName { static var isCommonTableExpression: Bool { true } }
+      let cte =
+          Reminder
+            .where { $0.isHighPriority }
+            .select {
+              Reminder.as(TopPriority.self).base.Columns(
+                id: $0.id,
+                assignedUserID: $0.assignedUserID,
+                dueDate: $0.dueDate,
+                isCompleted: $0.isCompleted,
+                isFlagged: $0.isFlagged,
+                notes: $0.notes,
+                priority: $0.priority,
+                remindersListID: $0.remindersListID,
+                title: $0.title,
+                updatedAt: $0.updatedAt
+              )
+            }
+      assertQuery(
+        With {
+          unsafeBitCast(cte, to: Select<TableAlias<Reminder, TopPriority>, Reminder, ()>.self)
+        } query: {
+          Reminder.as(TopPriority.self).all
+        }
+      ) {
+        """
+        WITH "topPriorities" AS (
+          SELECT "reminders"."id" AS "id", "reminders"."assignedUserID" AS "assignedUserID", "reminders"."dueDate" AS "dueDate", "reminders"."isCompleted" AS "isCompleted", "reminders"."isFlagged" AS "isFlagged", "reminders"."notes" AS "notes", "reminders"."priority" AS "priority", "reminders"."remindersListID" AS "remindersListID", "reminders"."title" AS "title", "reminders"."updatedAt" AS "updatedAt"
+          FROM "reminders"
+          WHERE ("reminders"."priority" IS 3)
+        )
+        SELECT "topPriorities"."id", "topPriorities"."assignedUserID", "topPriorities"."dueDate", "topPriorities"."isCompleted", "topPriorities"."isFlagged", "topPriorities"."notes", "topPriorities"."priority", "topPriorities"."remindersListID", "topPriorities"."title", "topPriorities"."updatedAt"
+        FROM "topPriorities"
+        """
+      } results: {
+        """
+        ┌─────────────────────────────────────────────┐
+        │ Reminder(                                   │
+        │   id: 3,                                    │
+        │   assignedUserID: nil,                      │
+        │   dueDate: Date(2001-01-01T00:00:00.000Z),  │
+        │   isCompleted: false,                       │
+        │   isFlagged: false,                         │
+        │   notes: "Ask about diet",                  │
+        │   priority: .high,                          │
+        │   remindersListID: 1,                       │
+        │   title: "Doctor appointment",              │
+        │   updatedAt: Date(2040-02-14T23:31:30.000Z) │
+        │ )                                           │
+        ├─────────────────────────────────────────────┤
+        │ Reminder(                                   │
+        │   id: 6,                                    │
+        │   assignedUserID: nil,                      │
+        │   dueDate: Date(2001-01-03T00:00:00.000Z),  │
+        │   isCompleted: false,                       │
+        │   isFlagged: true,                          │
+        │   notes: "",                                │
+        │   priority: .high,                          │
+        │   remindersListID: 2,                       │
+        │   title: "Pick up kids from school",        │
+        │   updatedAt: Date(2040-02-14T23:31:30.000Z) │
+        │ )                                           │
+        ├─────────────────────────────────────────────┤
+        │ Reminder(                                   │
+        │   id: 8,                                    │
+        │   assignedUserID: nil,                      │
+        │   dueDate: Date(2001-01-05T00:00:00.000Z),  │
+        │   isCompleted: false,                       │
+        │   isFlagged: false,                         │
+        │   notes: "",                                │
+        │   priority: .high,                          │
+        │   remindersListID: 2,                       │
+        │   title: "Take out trash",                  │
+        │   updatedAt: Date(2040-02-14T23:31:30.000Z) │
+        │ )                                           │
+        └─────────────────────────────────────────────┘
+        """
+      }
+    }
+    
     @Test func recursive() {
       assertQuery(
         With {

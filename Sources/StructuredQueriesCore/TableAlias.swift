@@ -20,12 +20,14 @@ import StructuredQueriesSupport
 public protocol AliasName {
   /// The string used to alias a table, _e.g._ `"tableName" AS "aliasName"`.
   static var aliasName: String { get }
+  static var isCommonTableExpression: Bool { get }
 }
 
 extension AliasName {
   public static var aliasName: String {
     _typeName(Self.self, qualified: false).lowerCamelCased().pluralized()
   }
+  public static var isCommonTableExpression: Bool { false }
 }
 
 extension Table {
@@ -84,9 +86,13 @@ public struct TableAlias<
   }
 
   public static var tableAlias: String? {
-    Name.aliasName
+    Name.isCommonTableExpression ? nil : Name.aliasName
   }
 
+  public static var cteName: String? {
+    Name.isCommonTableExpression ? Name.aliasName : nil
+  }
+  
   public static var all: SelectOf<Self> {
     var select = unsafeBitCast(Base.all.asSelect(), to: SelectOf<Self>.self)
     select.clauses.columns = select.clauses.columns.map {
@@ -137,6 +143,8 @@ public struct TableAlias<
       )
     }
   }
+  
+  public static var base: Base.Type { Base.self }
 }
 
 extension TableAlias: PrimaryKeyedTable where Base: PrimaryKeyedTable {
@@ -163,7 +171,7 @@ extension TableAlias: QueryExpression where Base: QueryExpression {
   public typealias QueryValue = Base.QueryValue
 
   public var queryFragment: QueryFragment {
-    base.queryFragment
+    Name.isCommonTableExpression ? "(\(quote: Name.aliasName))" : base.queryFragment
   }
 }
 

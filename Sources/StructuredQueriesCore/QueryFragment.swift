@@ -284,7 +284,7 @@ extension QueryFragment: ExpressibleByStringInterpolation {
         appendInterpolation(quote: schemaName)
         appendLiteral(".")
       }
-      appendInterpolation(quote: table.tableAlias ?? table.tableName)
+      appendInterpolation(quote: table.tableAlias ?? table.cteName ?? table.tableName)
     }
 
     @available(

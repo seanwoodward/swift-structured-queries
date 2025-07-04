@@ -20,7 +20,8 @@ public protocol Table: QueryRepresentable where TableColumns.QueryValue == Self 
   ///
   /// This property should always return `nil` unless called on a ``TableAlias``.
   static var tableAlias: String? { get }
-
+  static var cteName: String? { get }
+  
   /// The table schema's name.
   static var schemaName: String? { get }
 
@@ -90,6 +91,9 @@ extension Table {
   }
 
   public static var tableAlias: String? {
+    nil
+  }
+  public static var cteName: String? {
     nil
   }
 

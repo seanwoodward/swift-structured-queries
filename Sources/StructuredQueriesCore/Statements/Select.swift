@@ -1419,7 +1419,7 @@ extension Select: SelectStatement {
     if let schemaName = From.schemaName {
       query.append("\(quote: schemaName).")
     }
-    query.append("\(quote: From.tableName)")
+    query.append("\(quote: From.cteName ?? From.tableName)")
     if let tableAlias = From.tableAlias {
       query.append(" AS \(quote: tableAlias)")
     }
