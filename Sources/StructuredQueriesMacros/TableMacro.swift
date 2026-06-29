@@ -1244,33 +1244,33 @@ extension TableMacro: MemberMacro {
 
     var members =
       [
-      """
-      public \(nonisolated)struct TableColumns: \(schemaConformances, separator: ", ") {
-      public typealias QueryValue = \(type.trimmed)\(primaryKeyTypealias)
-      \(columnsProperties, separator: "\n")
-      public static var allColumns: [any \(moduleName).TableColumnExpression] {
-      var allColumns: [any \(moduleName).TableColumnExpression] = []
-      \(raw: allColumnsAssignment)return allColumns
-      }
-      public static var writableColumns: [any \(moduleName).WritableTableColumnExpression] {
-      var writableColumns: [any \(moduleName).WritableTableColumnExpression] = []
-      \(raw: writableColumnsAssignment)return writableColumns
-      }
-      public var queryFragment: QueryFragment {
-      "\(raw: selectedColumns.map { c, _ in #"\(self.\#(c))"# }.joined(separator: ", "))"
-      }
-      }
-      """,
-      """
-      public \(nonisolated)struct Selection: \(moduleName).TableExpression {
-      public typealias QueryValue = \(type.trimmed)
-      public let allColumns: [any \(moduleName).QueryExpression]
-      \(selectionInitializers, separator: "\n")
-      }
-      """,
-      draft,
-    ]
-    .compactMap { $0 }
+        """
+        public \(nonisolated)struct TableColumns: \(schemaConformances, separator: ", ") {
+        public typealias QueryValue = \(type.trimmed)\(primaryKeyTypealias)
+        \(columnsProperties, separator: "\n")
+        public static var allColumns: [any \(moduleName).TableColumnExpression] {
+        var allColumns: [any \(moduleName).TableColumnExpression] = []
+        \(raw: allColumnsAssignment)return allColumns
+        }
+        public static var writableColumns: [any \(moduleName).WritableTableColumnExpression] {
+        var writableColumns: [any \(moduleName).WritableTableColumnExpression] = []
+        \(raw: writableColumnsAssignment)return writableColumns
+        }
+        public var queryFragment: QueryFragment {
+        "\(raw: selectedColumns.map { c, _ in #"\(self.\#(c))"# }.joined(separator: ", "))"
+        }
+        }
+        """,
+        """
+        public \(nonisolated)struct Selection: \(moduleName).TableExpression {
+        public typealias QueryValue = \(type.trimmed)
+        public let allColumns: [any \(moduleName).QueryExpression]
+        \(selectionInitializers, separator: "\n")
+        }
+        """,
+        draft,
+      ]
+      .compactMap { $0 }
       + (node.attributeName.identifier == "_Draft"
         ? typeAliases + [
           "public \(nonisolated)static var columns: TableColumns { TableColumns() }",
