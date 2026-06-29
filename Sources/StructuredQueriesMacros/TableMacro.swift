@@ -4,6 +4,10 @@ public import SwiftSyntax
 import SwiftSyntaxBuilder
 public import SwiftSyntaxMacros
 
+#if CasePaths
+  import CasePathsMacrosSupport
+#endif
+
 public enum TableMacro {}
 
 extension TableMacro: ExtensionMacro {
@@ -63,39 +67,6 @@ extension TableMacro: ExtensionMacro {
               '@Table' can only be applied to struct types (and enum types with the \
               'CasePaths' package trait enabled)
               """
-          )
-        )
-      )
-      return []
-    }
-    if declaration.is(EnumDeclSyntax.self), !declaration.hasMacroApplication("CasePathable") {
-      var newAttributes: AttributeListSyntax = declaration.attributes
-      newAttributes.insert(
-        .attribute(
-          AttributeSyntax(
-            atSign: .atSignToken(),
-            attributeName: IdentifierTypeSyntax(name: "CasePathable"),
-            trailingTrivia: .space
-          )
-        ),
-        at: newAttributes.startIndex
-      )
-      context.diagnose(
-        Diagnostic(
-          node: node,
-          message: MacroExpansionErrorMessage(
-            """
-            '@Table' enum type missing required '@CasePathable' macro application
-            """
-          ),
-          fixIt: .replace(
-            message: MacroExpansionFixItMessage(
-              """
-              Insert '@CasePathable'
-              """
-            ),
-            oldNode: declaration.attributes,
-            newNode: newAttributes
           )
         )
       )
@@ -603,10 +574,16 @@ extension TableMacro: ExtensionMacro {
           let \(identifier) = try decoder.decode(\(decodedType).self)
           """
         )
+        let caseArgumentLabel: String
+        if let firstName = parameter.firstName, firstName.tokenKind != .wildcard {
+          caseArgumentLabel = "\(firstName.text.trimmingBackticks()): "
+        } else {
+          caseArgumentLabel = ""
+        }
         decodingAssignments.append(
           """
           if let \(identifier) {
-          self = .\(identifier)(\(identifier))
+          self = .\(identifier)(\(caseArgumentLabel)\(identifier))
           }
           """
         )
@@ -723,7 +700,7 @@ extension TableMacro: ExtensionMacro {
       extensionMembers.append(initFromOther)
     }
 
-    return [
+    var extensions: [ExtensionDeclSyntax] = [
       DeclSyntax(
         """
         \(declaration.attributes.availability)\(nonisolated)extension \(type)\
@@ -734,6 +711,18 @@ extension TableMacro: ExtensionMacro {
       )
       .cast(ExtensionDeclSyntax.self)
     ]
+    #if CasePaths
+      if declaration.is(EnumDeclSyntax.self) {
+        extensions += try CasePathableMacro.expansion(
+          of: node,
+          attachedTo: declaration,
+          providingExtensionsOf: type,
+          conformingTo: protocols,
+          in: context
+        )
+      }
+    #endif
+    return extensions
   }
 }
 
@@ -1253,7 +1242,8 @@ extension TableMacro: MemberMacro {
       return columnWidth
       """
 
-    return [
+    var members =
+      [
       """
       public \(nonisolated)struct TableColumns: \(schemaConformances, separator: ", ") {
       public typealias QueryValue = \(type.trimmed)\(primaryKeyTypealias)
@@ -1287,6 +1277,16 @@ extension TableMacro: MemberMacro {
           "public \(nonisolated)static var _columnWidth: Swift.Int { \(raw: columnWidth) }",
         ]
         : [])
+    #if CasePaths
+      if declaration.is(EnumDeclSyntax.self) {
+        members += try CasePathableMacro.expansion(
+          of: node,
+          providingMembersOf: declaration,
+          in: context
+        )
+      }
+    #endif
+    return members
   }
 }
 
