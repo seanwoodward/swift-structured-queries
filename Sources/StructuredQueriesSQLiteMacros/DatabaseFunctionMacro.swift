@@ -86,7 +86,8 @@ extension DatabaseFunctionMacro: PeerMacro {
 
       let (access, `static`) = declaration.modifiers.metadata
 
-      let needsWeakSelf = `static` == nil
+      let needsWeakSelf =
+        `static` == nil
         && context.lexicalContext.contains(where: { $0.as(ClassDeclSyntax.self) != nil })
 
       let bodyType = "()\(getter.throws || needsWeakSelf ? " throws" : "") -> \(outputType.trimmed)"
@@ -435,8 +436,11 @@ extension DatabaseFunctionMacro: PeerMacro {
         let originalParams = Array(declaration.signature.parameterClause.parameters)
         let argNames = originalParams.indices.map { "arg\($0)" }
         let callArgs = zip(originalParams, argNames).map { param, arg -> String in
-          if param.firstName.tokenKind == .wildcard { return arg }
-          else { return "\(param.firstName.text): \(arg)" }
+          if param.firstName.tokenKind == .wildcard {
+            return arg
+          } else {
+            return "\(param.firstName.text): \(arg)"
+          }
         }.joined(separator: ", ")
         let tryPrefix = functionOriginallyThrows ? "try " : ""
         let argList = argNames.isEmpty ? "in" : argNames.joined(separator: ", ") + " in"
