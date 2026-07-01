@@ -305,6 +305,39 @@ extension TableMacro: ExtensionMacro {
               }
               isGenerated = true
 
+            case .some(let label) where label.text == "lazyInitializable":
+              guard
+                draftTableType == nil,
+                binding.typeAnnotation?.type.isOptionalType == true
+              else { break }
+              var newAttribute = attribute
+              var newArguments = arguments
+              newArguments.remove(at: argumentIndex)
+              if newArguments.isEmpty {
+                newAttribute.leftParen = nil
+                newAttribute.arguments = nil
+                newAttribute.rightParen = nil
+              } else {
+                newArguments[newArguments.index(before: newArguments.endIndex)].trailingComma = nil
+                newAttribute.arguments = .argumentList(newArguments)
+              }
+              context.diagnose(
+                Diagnostic(
+                  node: argument,
+                  message: MacroExpansionWarningMessage(
+                    """
+                    Argument 'lazyInitializable' has no effect on optional column \
+                    '\(identifier.text)'
+                    """
+                  ),
+                  fixIt: .replace(
+                    message: MacroExpansionFixItMessage("Remove 'lazyInitializable'"),
+                    oldNode: Syntax(attribute),
+                    newNode: Syntax(newAttribute)
+                  )
+                )
+              )
+
             case let argument?:
               fatalError("Unexpected argument: \(argument)")
             }
@@ -526,6 +559,17 @@ extension TableMacro: ExtensionMacro {
                   node: argument.expression,
                   message: MacroExpansionErrorMessage(
                     "Argument 'generated' is not supported on enum table columns"
+                  )
+                )
+              )
+              continue
+
+            case .some(let label) where label.text == "lazyInitializable":
+              diagnostics.append(
+                Diagnostic(
+                  node: argument.expression,
+                  message: MacroExpansionErrorMessage(
+                    "Argument 'lazyInitializable' is not supported on enum table columns"
                   )
                 )
               )
@@ -790,6 +834,7 @@ extension TableMacro: MemberMacro {
         var isEphemeral = false
         var isExplicitColumn = false
         var isGenerated = false
+        var isLazyInitializable: Bool?
 
         for attribute in property.attributes {
           guard
@@ -857,6 +902,11 @@ extension TableMacro: MemberMacro {
               else { continue }
               isGenerated = true
 
+            case .some(let label) where label.text == "lazyInitializable":
+              isLazyInitializable =
+                argument.expression.as(BooleanLiteralExprSyntax.self)?.literal.tokenKind
+                == .keyword(.true)
+
             case let argument?:
               fatalError("Unexpected argument: \(argument)")
             }
@@ -922,6 +972,15 @@ extension TableMacro: MemberMacro {
         allColumnNames.append(identifier)
         if !isGenerated {
           writableColumns.append(identifier)
+          let lazyInitializableByDefault: Bool
+          #if LazyInitializableByDefault
+            lazyInitializableByDefault = true
+          #else
+            lazyInitializableByDefault = false
+          #endif
+          let isLazyInitializableColumn =
+            isLazyInitializable
+            ?? (lazyInitializableByDefault && defaultValue == nil)
           if let primaryKey, primaryKey.identifier == identifier {
             var property = property
             for attributeIndex in property.attributes.indices {
@@ -979,6 +1038,48 @@ extension TableMacro: MemberMacro {
             if let type = binding.typeAnnotation?.type.asOptionalType() {
               binding.typeAnnotation?.type = type
             }
+            property.bindings = [binding]
+            draftProperties.append(
+              DeclSyntax(
+                property
+                  .with(\.bindingSpecifier, .keyword(.var, trailingTrivia: .space))
+                  .removingAccessors()
+                  .rewritten(selfRewriter)
+              )
+            )
+          } else if isLazyInitializableColumn,
+            let type = binding.typeAnnotation?.type,
+            !type.isOptionalType
+          {
+            var property = property
+            for attributeIndex in property.attributes.indices {
+              guard
+                var attribute = property.attributes[attributeIndex].as(AttributeSyntax.self)?
+                  .trimmed,
+                let attributeName = attribute.attributeName.as(IdentifierTypeSyntax.self)?.name
+                  .text,
+                ["Column", "Columns"].contains(attributeName)
+              else { continue }
+              if case .argumentList(var arguments) = attribute.arguments {
+                for argumentIndex in arguments.indices {
+                  var argument = arguments[argumentIndex]
+                  defer { arguments[argumentIndex] = argument }
+                  if argument.label?.text == "as",
+                    var expression = argument.expression.as(MemberAccessExprSyntax.self)
+                  {
+                    expression.base = "\(expression.base)?"
+                    argument.expression = ExprSyntax(expression)
+                  }
+                }
+                attribute.arguments = .argumentList(arguments)
+              }
+              property.attributes[attributeIndex] = .attribute(
+                attribute.with(\.trailingTrivia, .space)
+              )
+            }
+            property = property.trimmed
+            var binding = binding
+            binding.typeAnnotation?.type = type.asOptionalType()
             property.bindings = [binding]
             draftProperties.append(
               DeclSyntax(
@@ -1087,6 +1188,9 @@ extension TableMacro: MemberMacro {
               expansionFailed = true
 
             case .some(let label) where label.text == "generated":
+              expansionFailed = true
+
+            case .some(let label) where label.text == "lazyInitializable":
               expansionFailed = true
 
             case let argument?:
@@ -1322,6 +1426,15 @@ extension TableMacro: MemberAttributeMacro {
     } else {
       checkAttribute = []
     }
+    let lazyInitializableHint: String
+    #if LazyInitializableByDefault
+      lazyInitializableHint =
+        binding.initializer == nil && binding.typeAnnotation?.type.isOptionalType == false
+        ? ", lazyInitializable: true"
+        : ""
+    #else
+      lazyInitializableHint = ""
+    #endif
     if identifier == "id" {
       for member in declaration.memberBlock.members {
         guard
@@ -1345,7 +1458,7 @@ extension TableMacro: MemberAttributeMacro {
           else { continue }
           return [
             """
-            @Column("\(raw: identifier)")
+            @Column("\(raw: identifier)"\(raw: lazyInitializableHint))
             """
           ] + checkAttribute
         }
@@ -1353,7 +1466,7 @@ extension TableMacro: MemberAttributeMacro {
     }
     return [
       """
-      @Column("\(raw: identifier)"\(raw: identifier == "id" ? ", primaryKey: true" : ""))
+      @Column("\(raw: identifier)"\(raw: identifier == "id" ? ", primaryKey: true" : lazyInitializableHint))
       """
     ] + checkAttribute
   }
