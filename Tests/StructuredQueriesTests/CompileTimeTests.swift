@@ -98,7 +98,7 @@ private func functionWithLotsOfArguments(
 
 // NB: Nested access control mismatch
 @Table
-fileprivate struct Item {
+private struct Item {
   @Selection
   struct Group {
     var a: Int
