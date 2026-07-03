@@ -309,5 +309,5 @@ where Base.QueryValue: _OptionalProtocol {
 
   let base: Base
 
-  public var queryFragment: QueryFragment { base.queryFragment}
+  public var queryFragment: QueryFragment { base.queryFragment }
 }
