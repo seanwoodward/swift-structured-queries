@@ -3518,7 +3518,7 @@ extension SnapshotTests {
                 throw Swift.DecodingError.dataCorrupted(
                   Swift.DecodingError.Context(
                     codingPath: container.codingPath,
-                    debugDescription: "Expected coding key not found."
+                    debugDescription: "Invalid number of keys found."
                   )
                 )
               }

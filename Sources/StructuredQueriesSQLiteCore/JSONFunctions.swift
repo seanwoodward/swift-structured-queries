@@ -123,7 +123,7 @@ extension TableDefinition where QueryValue: Codable {
   }
 }
 
-extension TableDefinition where QueryValue: StructuredQueriesCore._OptionalProtocol & Codable {
+extension TableDefinition where QueryValue: _OptionalProtocol & Codable {
   /// A JSON array representation of the aggregation of a table's columns.
   ///
   /// Constructs a JSON array of JSON objects with a field for each column of the table. This can be
@@ -202,49 +202,48 @@ extension TableDefinition where QueryValue: Codable {
   ///
   /// Useful for referencing a table row in a larger JSON selection.
   public func jsonObject() -> some QueryExpression<_CodableJSONRepresentation<QueryValue>> {
-    let fragment: QueryFragment = Self.allColumns
-      .map { "\(quote: $0.name, delimiter: .text), \(_jsonObjectValue($0))" }
-      .joined(separator: ", ")
-    return QueryFunction("json_object", SQLQueryExpression(fragment))
-  }
-}
+    func open<TableColumn: TableColumnExpression>(_ column: TableColumn) -> QueryFragment {
+      typealias Value = TableColumn.QueryValue._Optionalized.Wrapped
 
-private func _jsonObjectValue<TableColumn: TableColumnExpression>(
-  _ column: TableColumn
-) -> QueryFragment {
-  typealias Value = TableColumn.QueryValue._Optionalized.Wrapped
+      func isJSONRepresentation<T: Codable>(_: T.Type, isOptional: Bool = false) -> Bool {
+        func isOptionalJSONRepresentation<U: _OptionalProtocol>(_: U.Type) -> Bool {
+          if let codableType = U.Wrapped.self as? any Codable.Type {
+            return isJSONRepresentation(codableType, isOptional: true)
+          } else {
+            return false
+          }
+        }
+        if let optionalType = T.self as? any _OptionalProtocol.Type {
+          return isOptionalJSONRepresentation(optionalType)
+        } else if isOptional {
+          return TableColumn.QueryValue.self == T.JSONRepresentation?.self
+        } else {
+          return Value.self == T.JSONRepresentation.self
+        }
+      }
 
-  func isJSONRepresentation<T: Codable>(_: T.Type, isOptional: Bool = false) -> Bool {
-    func isOptionalJSONRepresentation<U: StructuredQueriesCore._OptionalProtocol>(_: U.Type) -> Bool
-    {
-      if let codableType = U.Wrapped.self as? any Codable.Type {
-        return isJSONRepresentation(codableType, isOptional: true)
+      if Value.self == Bool.self {
+        return """
+          \(quote: column.name, delimiter: .text), \
+          json(CASE \(column) WHEN 0 THEN 'false' WHEN 1 THEN 'true' END)
+          """
+      } else if Value.self == Date.UnixTimeRepresentation.self {
+        return "\(quote: column.name, delimiter: .text), datetime(\(column), 'unixepoch')"
+      } else if Value.self == Date.JulianDayRepresentation.self {
+        return "\(quote: column.name, delimiter: .text), datetime(\(column), 'julianday')"
+      } else if let codableType = TableColumn.QueryValue.QueryOutput.self
+        as? any Codable.Type,
+        isJSONRepresentation(codableType)
+      {
+        return "\(quote: column.name, delimiter: .text), json(\(column))"
       } else {
-        return false
+        return "\(quote: column.name, delimiter: .text), json_quote(\(column))"
       }
     }
-    if let optionalType = T.self as? any StructuredQueriesCore._OptionalProtocol.Type {
-      return isOptionalJSONRepresentation(optionalType)
-    } else if isOptional {
-      return TableColumn.QueryValue.self == T.JSONRepresentation?.self
-    } else {
-      return Value.self == T.JSONRepresentation.self
-    }
-  }
-
-  if Value.self == Bool.self {
-    return "json(CASE \(column) WHEN 0 THEN 'false' WHEN 1 THEN 'true' END)"
-  } else if Value.self == Date.UnixTimeRepresentation.self {
-    return "datetime(\(column), 'unixepoch')"
-  } else if Value.self == Date.JulianDayRepresentation.self {
-    return "datetime(\(column), 'julianday')"
-  } else if let codableType = TableColumn.QueryValue.QueryOutput.self
-    as? any Codable.Type,
-    isJSONRepresentation(codableType)
-  {
-    return "json(\(column))"
-  } else {
-    return "json_quote(\(column))"
+    let fragment: QueryFragment = Self.allColumns
+      .map { open($0) }
+      .joined(separator: ", ")
+    return QueryFunction("json_object", SQLQueryExpression(fragment))
   }
 }
 
