@@ -121,12 +121,12 @@ public enum _TableColumn<Root: Table, Value: QueryRepresentable> {
   }
 
   public static func `for`(
-    _ name: String,
+    _: String,
     keyPath: KeyPath<Root, Value.QueryOutput>,
     default defaultValue: Value.QueryOutput? = nil
   ) -> ColumnGroup<Root, Value>
   where Value: Table, Value.QueryOutput: Table {
-    ColumnGroup(name, keyPath: keyPath, default: defaultValue)
+    ColumnGroup(keyPath: keyPath, default: defaultValue)
   }
 }
 

@@ -7,8 +7,6 @@ public struct ColumnGroup<Root: Table, Values: Table>: _TableColumnExpression
 where Values.QueryOutput: Table {
   public typealias Value = Values
 
-  package let name: String
-
   public var _names: [String] { Values.TableColumns.allColumns.map(\.name) }
 
   public typealias QueryValue = Values
@@ -17,13 +15,10 @@ where Values.QueryOutput: Table {
 
   public let keyPath: KeyPath<Root, Values.QueryOutput>
 
-  // TODO: Reconsider access control level for 1.0.
   public init(
-    _ name: String,
     keyPath: KeyPath<Root, Values.QueryOutput>,
     default defaultValue: Values.QueryOutput? = nil
   ) {
-    self.name = name
     self.defaultValue = defaultValue
     self.keyPath = keyPath
   }
@@ -59,7 +54,6 @@ where Values.QueryOutput: Table {
   ) -> ColumnGroup<Root, Member> {
     let column = Values.columns[keyPath: keyPath]
     return ColumnGroup<Root, Member>(
-      column.name,
       keyPath: self.keyPath.appending(path: column.keyPath),
       default: column.defaultValue
     )

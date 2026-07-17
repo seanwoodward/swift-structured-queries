@@ -9,14 +9,6 @@ public protocol TableDefinition<QueryValue>: QueryExpression where QueryValue: T
 
   /// An array of this table's writable (non-generated) columns.
   static var writableColumns: [any WritableTableColumnExpression] { get }
-
-  static var _allMembers: [any _TableColumnExpression] { get }
-}
-
-extension TableDefinition {
-  public static var _allMembers: [any _TableColumnExpression] {
-    allColumns
-  }
 }
 
 extension TableDefinition {

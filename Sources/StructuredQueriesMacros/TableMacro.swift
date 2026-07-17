@@ -1288,12 +1288,6 @@ extension TableMacro: MemberMacro {
       allColumnNames
       .map { "allColumns.append(contentsOf: QueryValue.columns.\($0)._allColumns)\n" }
       .joined()
-    let allMembers =
-      declaration.is(EnumDeclSyntax.self)
-      ? allColumnNames
-        .map { "QueryValue.columns.\($0)" }
-        .joined(separator: ", ")
-      : nil
     let writableColumnsAssignment =
       writableColumns
       .map { "writableColumns.append(contentsOf: QueryValue.columns.\($0)._writableColumns)\n" }
@@ -1311,15 +1305,6 @@ extension TableMacro: MemberMacro {
       #endif
 
       """
-    let allMembersDecl =
-      allMembers.map {
-        """
-        \(optimizeNoneWorkaround)public static var _allMembers: [any \(moduleName)._TableColumnExpression] {
-        [\($0)]
-        }
-
-        """
-      } ?? ""
 
     var codingKeysDecl: DeclSyntax?
     var codableDecls: [DeclSyntax] = []
@@ -1444,7 +1429,7 @@ extension TableMacro: MemberMacro {
         var writableColumns: [any \(moduleName).WritableTableColumnExpression] = []
         \(raw: writableColumnsAssignment)return writableColumns
         }
-        \(raw: allMembersDecl)public var queryFragment: QueryFragment {
+        public var queryFragment: QueryFragment {
         "\(raw: selectedColumns.map { c, _ in #"\(self.\#(c))"# }.joined(separator: ", "))"
         }
         }
