@@ -26,8 +26,7 @@ public import StructuredQueriesCore
     conformances: Table,
     PartialSelectStatement,
     PrimaryKeyedTable,
-    names: named(CodingKeys),
-    named(Draft),
+    names: named(Draft),
     named(From),
     named(QueryValue),
     named(Selection),
@@ -36,6 +35,9 @@ public import StructuredQueriesCore
     named(columns),
     named(schemaName),
     named(tableName),
+    named(CodingKeys),
+    named(init(from:)),
+    named(encode(to:)),
     named(AllCasePaths),
     named(allCasePaths),
     named(_$Element)
@@ -54,8 +56,7 @@ public import StructuredQueriesCore
     conformances: Table,
     PartialSelectStatement,
     PrimaryKeyedTable,
-    names: named(CodingKeys),
-    named(Draft),
+    names: named(Draft),
     named(From),
     named(QueryValue),
     named(Selection),
@@ -63,7 +64,8 @@ public import StructuredQueriesCore
     named(_columnWidth),
     named(columns),
     named(schemaName),
-    named(tableName)
+    named(tableName),
+    named(CodingKeys)
   )
 #endif
 @attached(memberAttribute)
@@ -126,8 +128,7 @@ public macro Table(
     Table,
     PartialSelectStatement,
     PrimaryKeyedTable,
-    names: named(CodingKeys),
-    named(Draft),
+    names: named(Draft),
     named(From),
     named(QueryValue),
     named(Selection),
@@ -136,6 +137,9 @@ public macro Table(
     named(columns),
     named(schemaName),
     named(tableName),
+    named(CodingKeys),
+    named(init(from:)),
+    named(encode(to:)),
     named(AllCasePaths),
     named(allCasePaths),
     named(_$Element)
@@ -156,8 +160,7 @@ public macro Table(
     Table,
     PartialSelectStatement,
     PrimaryKeyedTable,
-    names: named(CodingKeys),
-    named(Draft),
+    names: named(Draft),
     named(From),
     named(QueryValue),
     named(Selection),
@@ -165,7 +168,8 @@ public macro Table(
     named(_columnWidth),
     named(columns),
     named(schemaName),
-    named(tableName)
+    named(tableName),
+    named(CodingKeys)
   )
 #endif
 @attached(memberAttribute)

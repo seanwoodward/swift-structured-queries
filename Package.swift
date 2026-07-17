@@ -129,6 +129,11 @@ let package = Package(
       name: "StructuredQueriesSQLiteCore",
       dependencies: [
         "StructuredQueriesCore",
+        .product(
+          name: "CasePaths",
+          package: "swift-case-paths",
+          condition: .when(traits: ["CasePaths"])
+        ),
         .product(name: "IssueReporting", package: "xctest-dynamic-overlay"),
       ]
     ),

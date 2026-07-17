@@ -732,7 +732,7 @@ extension SnapshotTests {
         nonisolated extension Draft {
           nonisolated init(decoder: inout some StructuredQueriesCore.QueryDecoder) throws {
             self.id = try decoder.decode(Self.columns.id)
-            let isCompleted = try decoder.decode(Self.columns.isCompleted) ?? Self.columns.isCompleted.defaultValue
+            let isCompleted = try decoder.decode(Self.columns.isCompleted)
             guard let isCompleted else {
               throw StructuredQueriesCore.QueryDecodingError.missingRequiredColumn
             }
@@ -747,7 +747,7 @@ extension SnapshotTests {
         nonisolated extension Foo: StructuredQueriesCore.Table, StructuredQueriesCore.PrimaryKeyedTable, StructuredQueriesCore.PartialSelectStatement {
           public nonisolated init(decoder: inout some StructuredQueriesCore.QueryDecoder) throws {
             let id = try decoder.decode(Self.columns.id)
-            let isCompleted = try decoder.decode(Self.columns.isCompleted) ?? Self.columns.isCompleted.defaultValue
+            let isCompleted = try decoder.decode(Self.columns.isCompleted)
             guard let id else {
               throw StructuredQueriesCore.QueryDecodingError.missingRequiredColumn
             }
@@ -916,7 +916,7 @@ extension SnapshotTests {
         nonisolated extension Draft {
           nonisolated init(decoder: inout some StructuredQueriesCore.QueryDecoder) throws {
             self.id = try decoder.decode(Self.columns.id)
-            let isCompleted = try decoder.decode(Self.columns.isCompleted) ?? Self.columns.isCompleted.defaultValue
+            let isCompleted = try decoder.decode(Self.columns.isCompleted)
             guard let isCompleted else {
               throw StructuredQueriesCore.QueryDecodingError.missingRequiredColumn
             }
@@ -931,7 +931,7 @@ extension SnapshotTests {
         nonisolated extension Foo: StructuredQueriesCore.Table, StructuredQueriesCore.PrimaryKeyedTable, StructuredQueriesCore.PartialSelectStatement {
           public nonisolated init(decoder: inout some StructuredQueriesCore.QueryDecoder) throws {
             let id = try decoder.decode(Self.columns.id)
-            let isCompleted = try decoder.decode(Self.columns.isCompleted) ?? Self.columns.isCompleted.defaultValue
+            let isCompleted = try decoder.decode(Self.columns.isCompleted)
             guard let id else {
               throw StructuredQueriesCore.QueryDecodingError.missingRequiredColumn
             }
@@ -3414,6 +3414,183 @@ extension SnapshotTests {
         }
 
         extension Post: CasePaths.CasePathable, CasePaths.CasePathIterable {
+        }
+        """#
+      }
+    }
+
+    @Test func enumCodableCodingKeys() {
+      assertMacro {
+        """
+        @Selection
+        enum Attachment: Codable {
+          case image(Image)
+          @Column("video_preview")
+          case videoPreview(VideoPreview)
+        }
+        """
+      } expansion: {
+        #"""
+        enum Attachment: Codable {
+          case image(Image)
+          case videoPreview(VideoPreview)
+
+          public nonisolated struct TableColumns: StructuredQueriesCore.TableDefinition {
+            public typealias QueryValue = Attachment
+            public let image = StructuredQueriesCore._TableColumn<QueryValue, Image?>.for("image", keyPath: \QueryValue.image)
+            public let videoPreview = StructuredQueriesCore._TableColumn<QueryValue, VideoPreview?>.for("video_preview", keyPath: \QueryValue.videoPreview)
+            #if compiler(>=6.4)
+            @_optimize(none)
+            #endif
+            public static var allColumns: [any StructuredQueriesCore.TableColumnExpression] {
+              var allColumns: [any StructuredQueriesCore.TableColumnExpression] = []
+              allColumns.append(contentsOf: QueryValue.columns.image._allColumns)
+              allColumns.append(contentsOf: QueryValue.columns.videoPreview._allColumns)
+              return allColumns
+            }
+            #if compiler(>=6.4)
+            @_optimize(none)
+            #endif
+            public static var writableColumns: [any StructuredQueriesCore.WritableTableColumnExpression] {
+              var writableColumns: [any StructuredQueriesCore.WritableTableColumnExpression] = []
+              writableColumns.append(contentsOf: QueryValue.columns.image._writableColumns)
+              writableColumns.append(contentsOf: QueryValue.columns.videoPreview._writableColumns)
+              return writableColumns
+            }
+            public var queryFragment: QueryFragment {
+              "\(self.image), \(self.videoPreview)"
+            }
+          }
+
+          public nonisolated struct Selection: StructuredQueriesCore.TableExpression {
+            public typealias QueryValue = Attachment
+            public let allColumns: [any StructuredQueriesCore.QueryExpression]
+            public static func image(
+              _ image: some StructuredQueriesCore.QueryExpression<Image>
+            ) -> Self {
+              var allColumns: [any StructuredQueriesCore.QueryExpression] = []
+              allColumns.append(contentsOf: image._allColumns)
+              allColumns.append(contentsOf: VideoPreview?(queryOutput: nil)._allColumns)
+              return Self(allColumns: allColumns)
+            }
+            public static func videoPreview(
+              _ videoPreview: some StructuredQueriesCore.QueryExpression<VideoPreview>
+            ) -> Self {
+              var allColumns: [any StructuredQueriesCore.QueryExpression] = []
+              allColumns.append(contentsOf: Image?(queryOutput: nil)._allColumns)
+              allColumns.append(contentsOf: videoPreview._allColumns)
+              return Self(allColumns: allColumns)
+            }
+          }
+
+          public typealias QueryValue = Self
+
+          public typealias From = Swift.Never
+
+          public nonisolated static var columns: TableColumns {
+            TableColumns()
+          }
+
+          public nonisolated static var _columnWidth: Swift.Int {
+            var columnWidth = 0
+            columnWidth += Image._columnWidth
+            columnWidth += VideoPreview._columnWidth
+            return columnWidth
+          }
+
+          public nonisolated static var tableName: Swift.String {
+            "attachments"
+          }
+
+          private enum CodingKeys: Swift.String, Swift.CodingKey {
+            case image
+            case videoPreview = "video_preview"
+          }
+
+          public nonisolated init(from decoder: any Swift.Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            guard container.allKeys.count == 1, let key = container.allKeys.first
+            else {
+              throw Swift.DecodingError.typeMismatch(
+                Self.self,
+                Swift.DecodingError.Context(
+                  codingPath: container.codingPath,
+                  debugDescription: "Invalid number of keys found, expected one."
+                )
+              )
+            }
+            switch key {
+            case .image:
+              self = .image(try container.decode(Image.self, forKey: .image))
+            case .videoPreview:
+              self = .videoPreview(try container.decode(VideoPreview.self, forKey: .videoPreview))
+            }
+          }
+
+          public nonisolated func encode(to encoder: any Swift.Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            switch self {
+            case .image(let value):
+              try container.encode(value, forKey: .image)
+            case .videoPreview(let value):
+              try container.encode(value, forKey: .videoPreview)
+            }
+          }
+
+          public struct AllCasePaths: CasePaths.CasePathReflectable, Swift.Sendable, Swift.Sequence {
+            public subscript(root: Attachment) -> CasePaths.PartialCaseKeyPath<Attachment> {
+              if root.is(\.image) {
+                return \.image
+              }
+              if root.is(\.videoPreview) {
+                return \.videoPreview
+              }
+              return \.never
+            }
+            public var image: CasePaths.AnyCasePath<Attachment, Image> {
+              ._$embed(Attachment.image) {
+                guard case let .image(v0) = $0 else {
+                  return nil
+                }
+                return v0
+              }
+            }
+            public var videoPreview: CasePaths.AnyCasePath<Attachment, VideoPreview> {
+              ._$embed(Attachment.videoPreview) {
+                guard case let .videoPreview(v0) = $0 else {
+                  return nil
+                }
+                return v0
+              }
+            }
+            public func makeIterator() -> Swift.IndexingIterator<[CasePaths.PartialCaseKeyPath<Attachment>]> {
+              var allCasePaths: [CasePaths.PartialCaseKeyPath<Attachment>] = []
+              allCasePaths.append(\.image)
+              allCasePaths.append(\.videoPreview)
+              return allCasePaths.makeIterator()
+            }
+          }
+
+          public static var allCasePaths: AllCasePaths {
+            AllCasePaths()
+          }
+        }
+
+        nonisolated extension Attachment: StructuredQueriesCore.Table, StructuredQueriesCore._Selection, StructuredQueriesCore.PartialSelectStatement {
+          public nonisolated init(decoder: inout some StructuredQueriesCore.QueryDecoder) throws {
+            let image = try decoder.decode(Self.columns.image) ?? nil
+            let videoPreview = try decoder.decode(Self.columns.videoPreview) ?? nil
+            if let image {
+              self = .image(image)
+            } else if let videoPreview {
+              self = .videoPreview(videoPreview)
+            } else {
+              throw StructuredQueriesCore.QueryDecodingError.missingRequiredColumn
+            }
+          }
+        }
+
+        extension Attachment: CasePaths.CasePathable, CasePaths.CasePathIterable {
         }
         """#
       }
