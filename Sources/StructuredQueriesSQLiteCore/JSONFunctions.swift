@@ -1,7 +1,7 @@
 import Foundation
 public import StructuredQueriesCore
 
-#if CasePaths
+#if CasePaths && ColumnCoding
   public import CasePaths
 #endif
 
@@ -219,7 +219,8 @@ private func _jsonObjectValue<TableColumn: TableColumnExpression>(
   typealias Value = TableColumn.QueryValue._Optionalized.Wrapped
 
   func isJSONRepresentation<T: Codable>(_: T.Type, isOptional: Bool = false) -> Bool {
-    func isOptionalJSONRepresentation<U: StructuredQueriesCore._OptionalProtocol>(_: U.Type) -> Bool {
+    func isOptionalJSONRepresentation<U: StructuredQueriesCore._OptionalProtocol>(_: U.Type) -> Bool
+    {
       if let codableType = U.Wrapped.self as? any Codable.Type {
         return isJSONRepresentation(codableType, isOptional: true)
       } else {
@@ -251,7 +252,7 @@ private func _jsonObjectValue<TableColumn: TableColumnExpression>(
   }
 }
 
-#if CasePaths
+#if CasePaths && ColumnCoding
   extension TableDefinition where QueryValue: Codable & CasePathable {
     /// A JSON representation of an enum table's columns.
     ///
@@ -271,10 +272,12 @@ private func _jsonObjectValue<TableColumn: TableColumnExpression>(
         } else if let group = child.value as? any _JSONColumnGroup {
           let groupColumns = group._jsonGroupColumns
           guard !groupColumns.isEmpty else { continue }
-          let condition: QueryFragment = groupColumns
+          let condition: QueryFragment =
+            groupColumns
             .map { "\($0) IS NOT NULL" }
             .joined(separator: " OR ")
-          let object: QueryFragment = groupColumns
+          let object: QueryFragment =
+            groupColumns
             .map { "\(quote: $0.name, delimiter: .text), \(_jsonObjectValue($0))" }
             .joined(separator: ", ")
           branches.append(
