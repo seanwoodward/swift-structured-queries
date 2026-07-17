@@ -2672,6 +2672,12 @@ extension SnapshotTests {
               writableColumns.append(contentsOf: QueryValue.columns.note._writableColumns)
               return writableColumns
             }
+            #if compiler(>=6.4)
+            @_optimize(none)
+            #endif
+            public static var _allMembers: [any StructuredQueriesCore._TableColumnExpression] {
+              [QueryValue.columns.photo, QueryValue.columns.note]
+            }
             public var queryFragment: QueryFragment {
               "\(self.photo), \(self.note)"
             }
@@ -2813,6 +2819,12 @@ extension SnapshotTests {
               writableColumns.append(contentsOf: QueryValue.columns.note._writableColumns)
               return writableColumns
             }
+            #if compiler(>=6.4)
+            @_optimize(none)
+            #endif
+            public static var _allMembers: [any StructuredQueriesCore._TableColumnExpression] {
+              [QueryValue.columns.photo, QueryValue.columns.note]
+            }
             public var queryFragment: QueryFragment {
               "\(self.photo), \(self.note)"
             }
@@ -2952,6 +2964,12 @@ extension SnapshotTests {
               writableColumns.append(contentsOf: QueryValue.columns.photo._writableColumns)
               writableColumns.append(contentsOf: QueryValue.columns.note._writableColumns)
               return writableColumns
+            }
+            #if compiler(>=6.4)
+            @_optimize(none)
+            #endif
+            public static var _allMembers: [any StructuredQueriesCore._TableColumnExpression] {
+              [QueryValue.columns.photo, QueryValue.columns.note]
             }
             public var queryFragment: QueryFragment {
               "\(self.photo), \(self.note)"
@@ -3094,6 +3112,12 @@ extension SnapshotTests {
               writableColumns.append(contentsOf: QueryValue.columns.note._writableColumns)
               return writableColumns
             }
+            #if compiler(>=6.4)
+            @_optimize(none)
+            #endif
+            public static var _allMembers: [any StructuredQueriesCore._TableColumnExpression] {
+              [QueryValue.columns.photo, QueryValue.columns.note]
+            }
             public var queryFragment: QueryFragment {
               "\(self.photo), \(self.note)"
             }
@@ -3231,6 +3255,12 @@ extension SnapshotTests {
               writableColumns.append(contentsOf: QueryValue.columns.note._writableColumns)
               return writableColumns
             }
+            #if compiler(>=6.4)
+            @_optimize(none)
+            #endif
+            public static var _allMembers: [any StructuredQueriesCore._TableColumnExpression] {
+              [QueryValue.columns.note]
+            }
             public var queryFragment: QueryFragment {
               "\(self.note)"
             }
@@ -3342,6 +3372,12 @@ extension SnapshotTests {
               var writableColumns: [any StructuredQueriesCore.WritableTableColumnExpression] = []
               writableColumns.append(contentsOf: QueryValue.columns.timestamp._writableColumns)
               return writableColumns
+            }
+            #if compiler(>=6.4)
+            @_optimize(none)
+            #endif
+            public static var _allMembers: [any StructuredQueriesCore._TableColumnExpression] {
+              [QueryValue.columns.timestamp]
             }
             public var queryFragment: QueryFragment {
               "\(self.timestamp)"
@@ -3460,6 +3496,12 @@ extension SnapshotTests {
                 writableColumns.append(contentsOf: QueryValue.columns.image._writableColumns)
                 writableColumns.append(contentsOf: QueryValue.columns.videoPreview._writableColumns)
                 return writableColumns
+              }
+              #if compiler(>=6.4)
+              @_optimize(none)
+              #endif
+              public static var _allMembers: [any StructuredQueriesCore._TableColumnExpression] {
+                [QueryValue.columns.image, QueryValue.columns.videoPreview]
               }
               public var queryFragment: QueryFragment {
                 "\(self.image), \(self.videoPreview)"

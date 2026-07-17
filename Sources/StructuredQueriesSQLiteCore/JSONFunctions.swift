@@ -260,16 +260,15 @@ private func _jsonObjectValue<TableColumn: TableColumnExpression>(
     /// generated for Codable enum tables.
     public func jsonObject() -> some QueryExpression<_CodableJSONRepresentation<QueryValue>> {
       var branches: [QueryFragment] = []
-      for child in Mirror(reflecting: self).children {
-        guard let label = child.label else { continue }
-        if let column = child.value as? any TableColumnExpression {
+      for member in Self._allMembers {
+        if let column = member as? any TableColumnExpression {
           branches.append(
             """
             WHEN \(column) IS NOT NULL \
             THEN json_object(\(quote: column.name, delimiter: .text), \(_jsonObjectValue(column)))
             """
           )
-        } else if let group = child.value as? any _JSONColumnGroup {
+        } else if let group = member as? any _JSONColumnGroup {
           let groupColumns = group._jsonGroupColumns
           guard !groupColumns.isEmpty else { continue }
           let condition: QueryFragment =
@@ -283,7 +282,7 @@ private func _jsonObjectValue<TableColumn: TableColumnExpression>(
           branches.append(
             """
             WHEN (\(condition)) \
-            THEN json_object(\(quote: label, delimiter: .text), json_object(\(object)))
+            THEN json_object(\(quote: group._jsonGroupName, delimiter: .text), json_object(\(object)))
             """
           )
         }
@@ -349,10 +348,12 @@ private func _jsonObjectValue<TableColumn: TableColumnExpression>(
   }
 
   private protocol _JSONColumnGroup {
+    var _jsonGroupName: String { get }
     var _jsonGroupColumns: [any TableColumnExpression] { get }
   }
 
   extension ColumnGroup: _JSONColumnGroup {
+    fileprivate var _jsonGroupName: String { name }
     fileprivate var _jsonGroupColumns: [any TableColumnExpression] { _allColumns }
   }
 #endif
